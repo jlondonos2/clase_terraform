@@ -1,0 +1,7 @@
+order_id,customer_id,product,amount,city,date
+1,101,laptop,1200,Bogota,2024-01-01
+2,102,mouse,25,Medellin,2024-01-01
+3,101,keyboard,75,Bogota,2024-01-02
+4,103,monitor,300,Cali,2024-01-03
+5,104,laptop,1150,Medellin,2024-01-04
+6,105,mouse,20,Bogota,2024-01-05

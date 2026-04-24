@@ -1,0 +1,78 @@
+name: Deploy Data Lake Terraform
+
+on:
+  push:
+    branches:
+      - feature/actions_back
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+
+    defaults:
+      run:
+        working-directory: infra/terraform/envs/dev
+
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v4
+
+      # AWS Auth
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: ${{ secrets.AWS_REGION }}
+
+      # PYTHON
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.10'
+
+      # DEPENDENCIAS
+      - name: Install dependencies
+        run: |
+          pip install pytest pyspark
+      
+      #Cambiar path
+      - name: Set PYTHONPATH
+        run: echo "PYTHONPATH=$GITHUB_WORKSPACE/infra/terraform/archivos_para_bronze" >> $GITHUB_ENV
+
+      # RUN TESTS
+      - name: Run Tests
+        run: |
+          pytest $GITHUB_WORKSPACE/infra/terraform/archivos_para_bronze/tests/
+
+      # Terraform
+      - name: Setup Terraform
+        uses: hashicorp/setup-terraform@v3
+
+      - name: Terraform Init
+        run: terraform init
+
+      - name: Terraform Validate
+        run: terraform validate
+
+      - name: Terraform Plan
+        run: terraform plan -var-file="dev.tfvars"
+
+      - name: Terraform Apply
+        run: terraform apply -auto-approve -var-file="dev.tfvars"
+
+      # Obtener outputs correctamente
+      - name: Get Terraform Outputs
+        id: outputs
+        run: |
+          echo "BRONZE_BUCKET=$(terraform output -raw bronze_bucket_name)" >> $GITHUB_ENV
+
+      # Subir CSV
+      - name: Upload CSV
+        run: |
+          aws s3 cp ../../archivos_para_bronze/sales_small.csv s3://$BRONZE_BUCKET/
+
+      # Subir script Glue
+      - name: Upload Glue Script
+        run: |
+          aws s3 cp ../../archivos_para_bronze/scripts/etl_sales.py s3://$BRONZE_BUCKET/scripts/etl_sales.py
