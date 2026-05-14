@@ -1,6 +1,6 @@
 terraform {
   backend "s3" {
-    bucket         = "datalake-terraform-state-670578095526"
+    bucket         = "datalake-terraform-state-140116241247"
     key            = "dev/terraform.tfstate"
     region         = "us-east-1"
     dynamodb_table = "terraform-locks"
@@ -18,7 +18,7 @@ module "bronze_bucket" {
   source      = "../../modules/s3_lake"
   project     = var.project
   env         = var.env
-  bucket_name = "bronze"
+  bucket_name = "raw"
   account_id  = data.aws_caller_identity.current.account_id
   tags        = var.tags
 }
@@ -27,7 +27,7 @@ module "silver_bucket" {
   source      = "../../modules/s3_lake"
   project     = var.project
   env         = var.env
-  bucket_name = "silver"
+  bucket_name = "staging"
   account_id  = data.aws_caller_identity.current.account_id
   tags        = var.tags
 }
@@ -36,7 +36,7 @@ module "gold_bucket" {
   source      = "../../modules/s3_lake"
   project     = var.project
   env         = var.env
-  bucket_name = "gold"
+  bucket_name = "analytics"
   account_id  = data.aws_caller_identity.current.account_id
   tags        = var.tags
 }
