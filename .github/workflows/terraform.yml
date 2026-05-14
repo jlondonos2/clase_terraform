@@ -11,7 +11,7 @@ jobs:
 
     defaults:
       run:
-        working-directory: infra/terraform/envs/dev
+        working-directory: terraform/envs/dev
 
     steps:
       - name: Checkout repo
