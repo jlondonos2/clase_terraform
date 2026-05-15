@@ -1,4 +1,3 @@
-
 variable "project" {
   type        = string
   description = "Nombre del proyecto"
@@ -14,9 +13,19 @@ variable "sfn_role_arn" {
   description = "ARN del rol IAM para Step Functions"
 }
 
-variable "glue_job_name" {
+variable "data_quality_job_name" {
   type        = string
-  description = "Nombre del Glue Job"
+  description = "Nombre del Glue Job de validación de calidad (dataQualityValidation)"
+}
+
+variable "bronze_to_silver_job_name" {
+  type        = string
+  description = "Nombre del Glue Job que mueve datos de Bronze a Silver"
+}
+
+variable "silver_to_gold_job_name" {
+  type        = string
+  description = "Nombre del Glue Job que mueve datos de Silver a Gold"
 }
 
 variable "tags" {

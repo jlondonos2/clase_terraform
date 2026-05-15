@@ -1,4 +1,4 @@
 output "job_name" {
   description = "Nombre del Glue Job"
-  value       = aws_glue_job.sales_etl.name
+  value       = aws_glue_job.this.name
 }

@@ -14,6 +14,23 @@
             "Resource": "*"
         },
         {
+            "Sid": "FullAccessToStepFunctions",
+            "Effect": "Allow",
+            "Action": "states:*",
+            "Resource": "*"
+        },
+        {
+            "Sid": "TerraformStateLockDynamoDB",
+            "Effect": "Allow",
+            "Action": [
+                "dynamodb:GetItem",
+                "dynamodb:PutItem",
+                "dynamodb:DeleteItem",
+                "dynamodb:DescribeTable"
+            ],
+            "Resource": "arn:aws:dynamodb:*:140116241247:table/terraform-locks"
+        },
+        {
             "Sid": "AllowCloudWatchLogs",
             "Effect": "Allow",
             "Action": [
@@ -76,7 +93,11 @@
                 "iam:GetPolicyVersion",
                 "iam:ListInstanceProfilesForRole",
                 "iam:ListPolicyVersions",
-                "iam:ListAttachedUserPolicies"
+                "iam:ListAttachedUserPolicies",
+                "iam:PutRolePolicy",
+                "iam:DeleteRolePolicy",
+                "iam:TagRole",
+                "iam:UntagRole"
             ],
             "Resource": "*"
         }

@@ -3,31 +3,35 @@ resource "aws_sfn_state_machine" "datalake_pipeline" {
   role_arn = var.sfn_role_arn
 
   definition = jsonencode({
-    Comment = "Pipeline Data Lake: Bronze → Silver"
-    StartAt = "RunGlueJob"
+    Comment = "Pipeline Bronze -> Silver -> Gold con Glue"
+    StartAt = "dataQualityValidation"
 
     States = {
-      RunGlueJob = {
+      dataQualityValidation = {
         Type     = "Task"
         Resource = "arn:aws:states:::glue:startJobRun.sync"
         Parameters = {
-          JobName = var.glue_job_name
+          JobName = var.data_quality_job_name
         }
-        Next = "JobSuccess"
-        Catch = [{
-          ErrorEquals = ["States.ALL"]
-          Next        = "JobFailed"
-        }]
+        Next = "bronzeToSilverJob"
       }
 
-      JobSuccess = {
-        Type = "Succeed"
+      bronzeToSilverJob = {
+        Type     = "Task"
+        Resource = "arn:aws:states:::glue:startJobRun.sync"
+        Parameters = {
+          JobName = var.bronze_to_silver_job_name
+        }
+        Next = "silverToGoldJob"
       }
 
-      JobFailed = {
-        Type  = "Fail"
-        Error = "GlueJobFailed"
-        Cause = "El job de Glue falló"
+      silverToGoldJob = {
+        Type     = "Task"
+        Resource = "arn:aws:states:::glue:startJobRun.sync"
+        Parameters = {
+          JobName = var.silver_to_gold_job_name
+        }
+        End = true
       }
     }
   })

@@ -35,12 +35,11 @@ jobs:
       - name: Install dependencies
         run: |
           pip install pytest pyspark
-      
-      #Cambiar path
+
+      # Cambiar path
       - name: Set PYTHONPATH
         run: echo "PYTHONPATH=$GITHUB_WORKSPACE/infra/terraform/archivos_para_bronze" >> $GITHUB_ENV
 
-    
       # Terraform
       - name: Setup Terraform
         uses: hashicorp/setup-terraform@v3
@@ -63,12 +62,12 @@ jobs:
         run: |
           echo "BRONZE_BUCKET=$(terraform output -raw bronze_bucket_name)" >> $GITHUB_ENV
 
-      # Subir CSV
+      # Subir CSV de origen al bucket bronze
       - name: Upload CSV
         run: |
-          aws s3 cp ../../archivos_para_bronze/sales_small.csv s3://$BRONZE_BUCKET/
+          aws s3 cp ../../archivos_para_bronze/hurto_transporte_publico.csv s3://$BRONZE_BUCKET/data/hurto_transporte_publico.csv
 
-      # Subir script Glue
+      # Subir script del Glue Job (Job_Exp.py)
       - name: Upload Glue Script
         run: |
-          aws s3 cp ../../archivos_para_bronze/scripts/etl_sales.py s3://$BRONZE_BUCKET/scripts/etl_sales.py
+          aws s3 cp ../../archivos_para_bronze/scripts/Job_Exp.py s3://$BRONZE_BUCKET/scripts/Job_Exp.py

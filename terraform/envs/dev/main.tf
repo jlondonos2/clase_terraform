@@ -14,6 +14,7 @@ provider "aws" {
 
 data "aws_caller_identity" "current" {}
 
+# ─── S3 LAKE BUCKETS ──────────────────────────────────────────
 module "bronze_bucket" {
   source      = "../../modules/s3_lake"
   project     = var.project
@@ -41,11 +42,18 @@ module "gold_bucket" {
   tags        = var.tags
 }
 
+# ─── GLUE JOB: Job_Exp_Terraform (data quality con Great Expectations) ──
 module "glue_job" {
   source = "../../modules/glue"
 
   project = var.project
   env     = var.env
+
+  # Job gestionado por Terraform. Le ponemos un nombre distinto del Job_Exp
+  # creado manualmente en AWS para evitar colisión al hacer apply.
+  # El Step Function de este módulo lo referencia automáticamente vía
+  # module.glue_job.job_name (no hace falta hard-codearlo abajo).
+  job_name = "Job_Exp_Terraform"
 
   glue_role_arn = module.iam.glue_role_arn
 
@@ -55,11 +63,10 @@ module "glue_job" {
 
   script_location = "s3://${module.bronze_bucket.bucket_name}/scripts/Job_Exp.py"
 
-
-
   tags = var.tags
 }
 
+# ─── IAM ROLES ────────────────────────────────────────────────
 module "iam" {
   source = "../../modules/iam"
 
@@ -72,14 +79,23 @@ module "iam" {
 }
 
 # ─── STEP FUNCTIONS ───────────────────────────────────────────
+# Encadena: dataQualityValidation -> bronzeToSilverJob -> silverToGoldJob
+# Job_Exp lo crea Terraform en este mismo apply.
+# bronze_to_silver_taller y silver_to_gold_taller ya existen en AWS
+# (creados manualmente en talleres previos); el Step Function los
+# referencia por nombre.
 module "step_functions" {
   source = "../../modules/step_functions"
 
-  project       = var.project
-  env           = var.env
-  sfn_role_arn  = module.iam.sfn_role_arn
-  glue_job_name = module.glue_job.job_name
-  tags          = var.tags
+  project      = var.project
+  env          = var.env
+  sfn_role_arn = module.iam.sfn_role_arn
+
+  data_quality_job_name     = module.glue_job.job_name
+  bronze_to_silver_job_name = "bronze_to_silver_taller"
+  silver_to_gold_job_name   = "silver_to_gold_taller"
+
+  tags = var.tags
 }
 
 # ─── SUBIR ARCHIVOS A S3 ──────────────────────────────────────

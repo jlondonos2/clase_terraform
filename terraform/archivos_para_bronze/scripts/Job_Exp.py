@@ -1,46 +1,55 @@
 import sys
-from pyspark.context import SparkContext
-from awsglue.context import GlueContext
-from pyspark.sql.functions import current_timestamp
-from datetime import datetime
-import logging
 import json
+import logging
+from datetime import datetime
+
+from pyspark.context import SparkContext
+from pyspark.sql.functions import current_timestamp
+
+from awsglue.context import GlueContext
+from awsglue.utils import getResolvedOptions
 
 import great_expectations as gx
 
 # -----------------------------------
-# 🔧 Inicializar Glue
+# Argumentos del Job (vienen de default_arguments en Terraform)
+# -----------------------------------
+args = getResolvedOptions(
+    sys.argv,
+    ["input_path", "output_path"]
+)
+INPUT_PATH = args["input_path"]
+OUTPUT_PATH = args["output_path"]
+
+# -----------------------------------
+# Inicializar Glue / Spark
 # -----------------------------------
 sc = SparkContext()
 glueContext = GlueContext(sc)
 spark = glueContext.spark_session
 
 # -----------------------------------
-# 🔧 Configurar logger (CORREGIDO PARA GLUE)
+# Configurar logger (para CloudWatch)
 # -----------------------------------
 logger = logging.getLogger("gx_logger")
 logger.setLevel(logging.INFO)
-
-#CLAVE: limpiar handlers existentes
 logger.handlers = []
 
 handler = logging.StreamHandler(sys.stdout)
-formatter = logging.Formatter('%(message)s')
+formatter = logging.Formatter("%(message)s")
 handler.setFormatter(formatter)
 
 logger.addHandler(handler)
 logger.propagate = False
 
-# Test inmediato (te ayuda a validar en CloudWatch)
-logger.info("🔥 GX LOGGER INICIADO 🔥")
-print("PRINT TEST OK")
+logger.info("GX LOGGER INICIADO")
+print(f"INPUT_PATH  = {INPUT_PATH}")
+print(f"OUTPUT_PATH = {OUTPUT_PATH}")
 
 # -----------------------------------
 # Leer datos (S3)
 # -----------------------------------
-df = spark.read.option("header", True).csv(
-    "s3://datalake-bronze-140116241247/Taller_Great_Expectations/hurto_transporte_publico.csv"
-)
+df = spark.read.option("header", True).csv(INPUT_PATH)
 
 # -----------------------------------
 # Inicializar GX
@@ -59,13 +68,12 @@ suite = context.add_or_update_expectation_suite("suite_hurtos")
 
 validator = context.get_validator(
     batch_request=batch_request,
-    expectation_suite=suite
+    expectation_suite=suite,
 )
 
 # -----------------------------------
 # VALIDACIONES
 # -----------------------------------
-
 validator.expect_table_columns_to_match_ordered_list(df.columns)
 validator.expect_table_row_count_to_be_between(min_value=1)
 
@@ -76,18 +84,18 @@ validator.expect_column_values_to_be_between("edad", min_value=0, max_value=100,
 validator.expect_column_values_to_be_in_set(
     "medio_transporte",
     ["Taxi", "Metro", "Autobus", "Bicicleta"],
-    mostly=0.90
+    mostly=0.90,
 )
 
 validator.expect_column_value_lengths_to_be_between(
     column="arma_medio",
-    min_value=2
+    min_value=2,
 )
 
 validator.expect_column_values_to_be_in_set(
     "sexo",
     ["Hombre", "Mujer"],
-    mostly=0.70
+    mostly=0.70,
 )
 
 # Latitud Medellín
@@ -95,7 +103,7 @@ validator.expect_column_values_to_be_between(
     "latitud",
     min_value=6.15,
     max_value=6.35,
-    mostly=0.80
+    mostly=0.80,
 )
 
 # Longitud Medellín
@@ -103,9 +111,9 @@ validator.expect_column_values_to_be_between(
     "longitud",
     min_value=-75.65,
     max_value=-75.50,
-    mostly=0.80
+    mostly=0.80,
 )
-    
+
 # -----------------------------------
 # Ejecutar validación
 # -----------------------------------
@@ -123,7 +131,6 @@ log_payload = {
     "run_id": results_json.get("meta", {}).get("run_id"),
 }
 
-# Logger + print (doble garantía)
 logger.info(json.dumps(log_payload))
 print(json.dumps(log_payload))
 
@@ -144,7 +151,7 @@ if failed_expectations:
     fail_payload = {
         "event": "gx_failed_expectations",
         "count": len(failed_expectations),
-        "details": failed_expectations[:10]
+        "details": failed_expectations[:10],
     }
     logger.warning(json.dumps(fail_payload))
     print(json.dumps(fail_payload))
@@ -156,12 +163,10 @@ results_str = json.dumps(results_json)
 
 results_df = spark.createDataFrame(
     [(results_str,)],
-    ["validation_results"]
+    ["validation_results"],
 ).withColumn("timestamp", current_timestamp())
 
-output_path = "s3://datalake-bronze-140116241247/Taller_Great_Expectations/validation_results/"
-
-results_df.coalesce(1).write.mode("overwrite").json(output_path)
+results_df.coalesce(1).write.mode("overwrite").json(OUTPUT_PATH)
 
 # -----------------------------------
 # Control de fallo
