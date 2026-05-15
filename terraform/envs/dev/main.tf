@@ -53,7 +53,7 @@ module "glue_job" {
   silver_bucket = module.silver_bucket.bucket_name
   temp_bucket   = module.bronze_bucket.bucket_name
 
-  script_location = "s3://${module.bronze_bucket.bucket_name}/scripts/etl_sales.py"
+  script_location = "s3://${module.bronze_bucket.bucket_name}/scripts/Job_Exp.py"
 
 
 
@@ -69,4 +69,31 @@ module "iam" {
   bronze_bucket = module.bronze_bucket.bucket_name
   silver_bucket = module.silver_bucket.bucket_name
   temp_bucket   = module.bronze_bucket.bucket_name
+}
+
+# ─── STEP FUNCTIONS ───────────────────────────────────────────
+module "step_functions" {
+  source = "../../modules/step_functions"
+
+  project       = var.project
+  env           = var.env
+  sfn_role_arn  = module.iam.sfn_role_arn
+  glue_job_name = module.glue_job.job_name
+  tags          = var.tags
+}
+
+# ─── SUBIR ARCHIVOS A S3 ──────────────────────────────────────
+
+resource "aws_s3_object" "hurto_csv" {
+  bucket = module.bronze_bucket.bucket_name
+  key    = "data/hurto_transporte_publico.csv"
+  source = "${path.root}/../../archivos_para_bronze/hurto_transporte_publico.csv"
+  etag   = filemd5("${path.root}/../../archivos_para_bronze/hurto_transporte_publico.csv")
+}
+
+resource "aws_s3_object" "glue_script" {
+  bucket = module.bronze_bucket.bucket_name
+  key    = "scripts/Job_Exp.py"
+  source = "${path.root}/../../archivos_para_bronze/scripts/Job_Exp.py"
+  etag   = filemd5("${path.root}/../../archivos_para_bronze/scripts/Job_Exp.py")
 }
