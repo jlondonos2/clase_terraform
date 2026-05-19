@@ -12,7 +12,7 @@ resource "aws_glue_job" "this" {
     "--input_path"                = "s3://${var.bronze_bucket}/data/hurto_transporte_publico.csv"
     "--output_path"               = "s3://${var.silver_bucket}/validation_results/"
     "--TempDir"                   = "s3://${var.temp_bucket}/temp/"
-    "--additional-python-modules" = "great_expectations"
+    "--additional-python-modules" = "great_expectations==0.18.22"
   }
 
   worker_type       = "G.1X"
